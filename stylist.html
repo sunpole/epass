@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Демо и Редактор Стилизации — Антон Магомедов</title>
+<style>
+  /* === Основные цвета и переменные === */
+  :root {
+    --bg: #121212;
+    --fg: #eee;
+    --accent: #4cafef;
+    --accent-dark: #357ab8;
+    --error: #ff5252;
+    --conflict-bg: #ff4444;
+    --conflict-fg: #222;
+    --input-bg: #222;
+    --input-fg: #eee;
+    --border-radius: 6px;
+    --font: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    --transition: 0.3s ease;
+  }
+  /* === Сброс и базовая стилизация === */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0; padding: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    user-select: none;
+  }
+  h1, h2, h3 {
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+  }
+  p {
+    margin: 0.3rem 0;
+  }
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  a:hover, a:focus {
+    color: var(--accent-dark);
+    outline: none;
+  }
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 0.5rem 1rem;
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+    transition: background-color var(--transition);
+    user-select: none;
+  }
+  button:hover, button:focus {
+    background: var(--accent-dark);
+    outline: none;
+  }
+  button.secondary {
+    background: #444;
+    color: var(--fg);
+  }
+  input[type="text"],
+  input[type="number"],
+  input[type="color"],
+  input[type="range"],
+  select,
+  textarea {
+    background: var(--input-bg);
+    color: var(--input-fg);
+    border: 1px solid #555;
+    border-radius: var(--border-radius);
+    padding: 0.4rem 0.6rem;
+    font-size: 1rem;
+    transition: border-color var(--transition);
+    width: 100%;
+    font-family: var(--font);
+  }
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="color"]:focus,
+  input[type="range"]:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  label {
+    cursor: pointer;
+    user-select: none;
+  }
+  /* === Основной каркас === */
+  #topbar {
+    flex-shrink: 0;
+    background: #1a1a1a;
+    border-bottom: 1px solid #222;
+    padding: 0.6rem 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    user-select: none;
+  }
+  #topbar button {
+    flex-grow: 0;
+    flex-shrink: 0;
+  }
+  #app {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+    height: calc(100vh - 48px);
+  }
+  #demoPanel {
+    flex-grow: 3;
+    background: #181818;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+  #demoGrid {
+    display: grid;
+    gap: 1rem;
+  }
+  /* === Сетки плиток - по умолчанию 3 === */
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .grid-5 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  /* === Карточки элементов === */
+  .demoCard {
+    background: #222;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 0 8px rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 90px;
+    user-select: none;
+  }
+  .demoCard label {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #bbb;
+    text-align: center;
+  }
+  /* === Мигающая лампочка === */
+  .blinkLamp {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: limegreen;
+    box-shadow: 0 0 8px limegreen;
+    animation: blinkAnim 1.2s infinite alternate;
+    margin-bottom: 0.5rem;
+  }
+  @keyframes blinkAnim {
+    0% { opacity: 1; box-shadow: 0 0 12px limegreen; }
+    50% { opacity: 0.3; box-shadow: none; }
+    100% { opacity: 1; box-shadow: 0 0 12px limegreen; }
+  }
+  /* === Таблицы === */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    background: #222;
+    color: var(--fg);
+    font-size: 0.9rem;
+    user-select: text;
+  }
+  th, td {
+    border: 1px solid #444;
+    padding: 0.4rem 0.6rem;
+    text-align: left;
+  }
+  th {
+    background: #2c2c2c;
+  }
+  /* === Прогрессбар === */
+  progress {
+    width: 100%;
+    height: 20px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+  progress::-webkit-progress-bar {
+    background-color: #333;
+  }
+  progress::-webkit-progress-value {
+    background-color: var(--accent);
+  }
+  /* === Скрытые панели (редактор и библиотека) === */
+  #styleEditor, #styleGuide {
+    position: fixed;
+    top: 48px;
+    bottom: 0;
+    width: 350px;
+    max-width: 90vw;
+    background: #1e1e1e;
+    border-left: 2px solid #333;
+    box-shadow: -3px 0 8px rgba(0,0,0,0.8);
+    padding: 1rem;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 10;
+    user-select: text;
+    display: flex;
+    flex-direction: column;
+  }
+  #styleEditor.open, #styleGuide.open {
+    transform: translateX(0);
+  }
+  #styleEditor header, #styleGuide header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.8rem;
+  }
+  #styleEditor header h2, #styleGuide header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+  }
+  #styleEditorClose, #styleGuideClose {
+    cursor: pointer;
+    background: var(--accent);
+    border-radius: var(--border-radius);
+    border: none;
+    padding: 0.3rem 0.7rem;
+    font-weight: 700;
+    color: #000;
+  }
+  /* === Таблица редактора стилей === */
+  #styleTable {
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+  }
+  #styleTable th, #styleTable td {
+    border: 1px solid #444;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.9rem;
+    vertical-align: middle;
+  }
+  #styleTable th {
+    background: #2a2a2a;
+  }
+  #styleTable input[type="text"], #styleTable input[type="color"] {
+    width: 100%;
+    padding: 0.15rem 0.3rem;
+    border-radius: var(--border-radius);
+    border: 1px solid #555;
+    background: var(--input-bg);
+    color: var(--input-fg);
+    font-size: 0.9rem;
+  }
+  #styleTable .conflict {
+    background: var(--conflict-bg);
+    color: var(--conflict-fg);
+    font-weight: 700;
+  }
+  /* === Импорт/Экспорт кнопки === */
+  #exportBtn, #importBtn {
+    margin-top: 0.6rem;
+    width: 48%;
+  }
+  /* === Библиотека стилей: таблица и описание === */
+  #guideTable {
+    width: 100%;
+    border-collapse: collapse;
+    overflow-x: auto;
+    margin-top: 0.5rem;
+  }
+  #guideTable th, #guideTable td {
+    border: 1px solid #444;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.9rem;
+    vertical-align: top;
+  }
+  #guideTable th {
+    background: #2a2a2a;
+  }
+  /* === Мобильная адаптация === */
+  @media (max-width: 900px) {
+    #app {
+      flex-direction: column;
+      height: auto;
+    }
+    #demoPanel {
+      flex-grow: 0;
+      height: auto;
+      overflow-y: visible;
+      padding-bottom: 4rem;
+    }
+    #styleEditor, #styleGuide {
+      position: fixed;
+      top: 48px;
+      bottom: 0;
+      left: 0;
+      width: 100vw;
+      max-width: none;
+      z-index: 20;
+      border-left: none;
+      box-shadow: none;
+      transform: translateX(100%);
+      padding: 1rem 0.7rem;
+      font-size: 0.95rem;
+    }
+    #styleEditor.open, #styleGuide.open {
+      transform: translateX(0);
+    }
+  }
+  /* === Плитки с кнопками выбора сетки === */
+  #gridBtns button.active {
+    background-color: var(--accent-dark);
+    color: #000;
+  }
+  /* === Элементы формы с отображением стилей === */
+  .formInline {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .formInline label {
+    min-width: 110px;
+    font-weight: 600;
+    color: #ccc;
+  }
+  /* === Стилизация checkbox и radio === */
+  input[type="checkbox"], input[type="radio"] {
+    cursor: pointer;
+  }
+  /* === Scrollbar стили для webkit === */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #222;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--accent);
+    border-radius: 10px;
+  }
+  /* === Ссылки в описаниях === */
+  #styleGuide a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  #styleGuide a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar" role="navigation" aria-label="Панель управления">
+  <div id="gridBtns" aria-label="Выбор сетки плиток">
+    <button id="btnGrid2" aria-pressed="false">2 в ряд</button>
+    <button id="btnGrid3" aria-pressed="true" class="active">3 в ряд</button>
+    <button id="btnGrid5" aria-pressed="false">5 в ряд</button>
+  </div>
+  <button id="btnOpenEditor" aria-controls="styleEditor" aria-expanded="false" aria-label="Открыть редактор стилей">Редактор стилей</button>
+  <button id="btnOpenGuide" aria-controls="styleGuide" aria-expanded="false" aria-label="Открыть библиотеку стилей">Библиотека стилей</button>
+</div>
+
+<div id="app" role="main">
+
+  <section id="demoPanel" aria-label="Демонстрационная панель элементов">
+    <h1>Демо элементов и стили</h1>
+    <div id="demoGrid" class="grid-3" tabindex="0" aria-live="polite" aria-atomic="true">
+      <!-- Плитки будут сгенерированы скриптом -->
+    </div>
+  </section>
+
+  <aside id="styleEditor" aria-label="Редактор стилей" role="region" tabindex="-1" aria-hidden="true">
+    <header>
+      <h2>Редактор стилей</h2>
+      <button id="styleEditorClose" aria-label="Закрыть редактор">×</button>
+    </header>
+    <table id="styleTable" aria-describedby="styleTableDesc" tabindex="0">
+      <caption id="styleTableDesc" style="text-align:left; margin-bottom:0.5rem; font-weight:600;">
+        Настройте стили элементов. Конфликтующие параметры подсвечены.
+      </caption>
+      <thead>
+        <tr><th>Элемент / Свойство</th><th>Значение</th></tr>
+      </thead>
+      <tbody>
+        <!-- Строки с элементами стилей создаются JS -->
+      </tbody>
+    </table>
+    <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap: wrap;">
+      <button id="exportBtn">Экспорт JSON</button>
+      <button id="importBtn">Импорт JSON</button>
+      <input type="file" id="importFile" accept=".json" style="display:none;" aria-hidden="true" />
+    </div>
+  </aside>
+
+  <aside id="styleGuide" aria-label="Библиотека стилей (гайд)" role="region" tabindex="-1" aria-hidden="true">
+    <header>
+      <h2>Библиотека стилей</h2>
+      <button id="styleGuideClose" aria-label="Закрыть библиотеку">×</button>
+    </header>
+    <p>Краткий гайд по CSS-свойствам, совместимости и примерам. Красным выделены конфликтующие свойства.</p>
+    <table id="guideTable" role="grid" aria-readonly="true">
+      <thead>
+        <tr><th>Свойство</th><th>Описание</th><th>Пример</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>background</td><td>Цвет или изображение фона элемента.</td><td style="background:#4cafef;">#4cafef</td></tr>
+        <tr><td>color</td><td>Цвет текста.</td><td style="color:#4cafef;">Текст</td></tr>
+        <tr><td>border-radius</td><td>Скругление углов.</td><td><div style="width:40px;height:20px;background:#4cafef;border-radius:10px;"></div></td></tr>
+        <tr><td>box-shadow</td><td>Тень вокруг элемента.</td><td><div style="width:40px;height:20px;background:#4cafef;box-shadow:0 0 6px #0a68c0;"></div></td></tr>
+        <tr><td>font-weight</td><td>Толщина шрифта.</td><td><span style="font-weight:700;">700</span></td></tr>
+        <tr><td>display</td><td>Тип отображения (block, inline, flex, grid и т.д.).</td><td>flex / block / inline</td></tr>
+        <tr><td>margin</td><td>Отступы снаружи элемента.</td><td style="background:#333;"><div style="margin:5px;background:#4cafef;height:20px;"></div></td></tr>
+        <tr><td>padding</td><td>Внутренние отступы.</td><td style="background:#333;"><div style="padding:5px;background:#4cafef;color:#000;">Текст</div></td></tr>
+        <tr><td style="background:#ff4444; color:#000;">width</td><td style="background:#ff4444; color:#000;">Ширина элемента (может конфликтовать с display: inline).</td><td style="background:#4cafef;">100px</td></tr>
+        <tr><td style="background:#ff4444; color:#000;">height</td><td style="background:#ff4444; color:#000;">Высота элемента (может конфликтовать с display: inline).</td><td style="background:#4cafef;">40px</td></tr>
+        <tr><td>opacity</td><td>Прозрачность (0-1).</td><td style="opacity:0.5;">Прозрачный</td></tr>
+        <tr><td>transition</td><td>Анимация изменения свойств.</td><td>all 0.3s ease</td></tr>
+      </tbody>
+    </table>
+  </aside>
+
+</div>
+
+<script>
+(() => {
+  // === Основные переменные и структура элементов ===
+  const demoGrid = document.getElementById('demoGrid');
+  const styleEditor = document.getElementById('styleEditor');
+  const styleGuide = document.getElementById('styleGuide');
+  const styleTableBody = document.querySelector('#styleTable tbody');
+  const importFileInput = document.getElementById('importFile');
+
+  // Элементы для переключения сетки
+  const gridButtons = {
+    2: document.getElementById('btnGrid2'),
+    3: document.getElementById('btnGrid3'),
+    5: document.getElementById('btnGrid5'),
+  };
+
+  // Кнопки открытия/закрытия редактора и гайда
+  const btnOpenEditor = document.getElementById('btnOpenEditor');
+  const btnOpenGuide = document.getElementById('btnOpenGuide');
+  const btnCloseEditor = document.getElementById('styleEditorClose');
+  const btnCloseGuide = document.getElementById('styleGuideClose');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+
+  // Данные - список элементов с селекторами и начальными стилями
+  // Можно расширять, каждый объект - демонстрационный элемент и его стили
+  const elementsData = [
+    {
+      id: 'btnPrimary',
+      name: 'Кнопка основная',
+      selector: '.btn-primary',
+      html: '<button class="btn-primary" type="button">Основная кнопка</button>',
+      styles: {
+        backgroundColor: '#4cafef',
+        color: '#000',
+        borderRadius: '6px',
+        fontWeight: '600',
+        padding: '0.5rem 1rem',
+        border: 'none',
+        cursor: 'pointer',
+      }
+    },
+    {
+      id: 'btnSecondary',
+      name: 'Кнопка вторичная',
+      selector: '.btn-secondary',
+      html: '<button class="btn-secondary" type="button">Вторичная кнопка</button>',
+      styles: {
+        backgroundColor: '#444',
+        color: '#eee',
+        borderRadius: '6px',
+        fontWeight: '600',
+        padding: '0.5rem 1rem',
+        border: 'none',
+        cursor: 'pointer',
+      }
+    },
+    {
+      id: 'inputText',
+      name: 'Поле ввода текст',
+      selector: '.input-text',
+      html: '<input type="text" class="input-text" placeholder="Текстовое поле">',
+      styles: {
+        backgroundColor: '#222',
+        color: '#eee',
+        borderRadius: '6px',
+        border: '1px solid #555',
+        padding: '0.4rem 0.6rem',
+        fontSize: '1rem',
+      }
+    },
+    {
+      id: 'inputCheckbox',
+      name: 'Чекбокс',
+      selector: '.input-checkbox',
+      html: '<label><input type="checkbox" class="input-checkbox"> Чекбокс</label>',
+      styles: {
+        cursor: 'pointer',
+      }
+    },
+    {
+      id: 'inputRadio',
+      name: 'Переключатель',
+      selector: '.input-radio',
+      html: '<label><input type="radio" name="radio-group" class="input-radio"> Переключатель</label>',
+      styles: {
+        cursor: 'pointer',
+      }
+    },
+    {
+      id: 'select',
+      name: 'Выпадающий список',
+      selector: '.select',
+      html: '<select class="select"><option>Опция 1</option><option>Опция 2</option><option>Опция 3</option></select>',
+      styles: {
+        backgroundColor: '#222',
+        color: '#eee',
+        borderRadius: '6px',
+        border: '1px solid #555',
+        padding: '0.4rem 0.6rem',
+      }
+    },
+    {
+      id: 'textarea',
+      name: 'Текстовая область',
+      selector: '.textarea',
+      html: '<textarea class="textarea" rows="3" placeholder="Текстовая область"></textarea>',
+      styles: {
+        backgroundColor: '#222',
+        color: '#eee',
+        borderRadius: '6px',
+        border: '1px solid #555',
+        padding: '0.4rem 0.6rem',
+        resize: 'vertical',
+        fontSize: '1rem',
+      }
+    },
+    {
+      id: 'link',
+      name: 'Ссылка',
+      selector: '.link',
+      html: '<a href="#" class="link">Пример ссылки</a>',
+      styles: {
+        color: '#4cafef',
+        textDecoration: 'underline',
+        cursor: 'pointer',
+      }
+    },
+    {
+      id: 'progress',
+      name: 'Полоса прогресса',
+      selector: '.progress',
+      html: '<progress class="progress" max="100" value="70"></progress>',
+      styles: {
+        width: '100%',
+        height: '20px',
+        borderRadius: '6px',
+        overflow: 'hidden',
+      }
+    },
+    {
+      id: 'blinkLamp',
+      name: 'Мигающая лампа',
+      selector: '.blink-lamp',
+      html: '<div class="blink-lamp" aria-label="Мигающая лампа"></div>',
+      styles: {
+        width: '25px',
+        height: '25px',
+        borderRadius: '50%',
+        backgroundColor: 'limegreen',
+        boxShadow: '0 0 8px limegreen',
+        animation: 'blinkAnim 1.2s infinite alternate',
+      }
+    },
+    {
+      id: 'table',
+      name: 'Таблица',
+      selector: '.table',
+      html: `<table class="table" aria-label="Пример таблицы">
+        <thead><tr><th>Заголовок 1</th><th>Заголовок 2</th></tr></thead>
+        <tbody>
+          <tr><td>Ячейка 1</td><td>Ячейка 2</td></tr>
+          <tr><td>Ячейка 3</td><td>Ячейка 4</td></tr>
+        </tbody>
+      </table>`,
+      styles: {
+        borderCollapse: 'collapse',
+        width: '100%',
+        backgroundColor: '#222',
+        color: '#eee',
+        fontSize: '0.9rem',
+      }
+    }
+  ];
+
+  // Свойства CSS, которые мы можем редактировать для каждого элемента
+  // а также которые надо проверять на конфликты
+  const editableCssProps = [
+    'backgroundColor',
+    'color',
+    'borderRadius',
+    'border',
+    'padding',
+    'margin',
+    'fontWeight',
+    'fontSize',
+    'width',
+    'height',
+    'boxShadow',
+    'cursor',
+    'textDecoration',
+    'opacity',
+    'animation',
+  ];
+
+  // Определение конфликтующих CSS свойств (пример)
+  // Если в одном элементе заданы одновременно props из этих групп — конфликт
+  const conflicts = [
+    ['width', 'display'],    // width конфликтует с display:inline
+    ['height', 'display'],
+    ['backgroundColor', 'backgroundImage'],
+    ['animation', 'transition'], 
+    ['opacity', 'backgroundColor'], // (условный пример)
+  ];
+
+  // === Функция для проверки конфликтов для заданных стилей элемента ===
+  // Возвращает массив конфликтующих props, пустой если нет
+  function checkConflicts(styles) {
+    const keys = Object.keys(styles);
+    const foundConflicts = [];
+    conflicts.forEach(group => {
+      const present = group.filter(p => keys.includes(p));
+      if (present.length > 1) foundConflicts.push(...present);
+    });
+    return [...new Set(foundConflicts)]; // уникальные
+  }
+
+  // Создаём плитки элементов на demoGrid
+  function buildDemoGrid() {
+    demoGrid.innerHTML = '';
+    elementsData.forEach(el => {
+      const card = document.createElement('div');
+      card.className = 'demoCard';
+      card.setAttribute('data-id', el.id);
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', el.name);
+      card.innerHTML = el.html;
+      demoGrid.appendChild(card);
+
+      // Применяем начальные стили
+      applyStylesToElement(el);
+    });
+  }
+
+  // Применить стили из элементов к реальному DOM внутри demoCard
+  function applyStylesToElement(el) {
+    const cards = demoGrid.querySelectorAll(`.demoCard[data-id="${el.id}"]`);
+    cards.forEach(card => {
+      // Для элементов внутри карты — выбираем по селектору и применяем стили
+      const target = card.querySelector(el.selector) || card;
+      if (!target) return;
+      Object.entries(el.styles).forEach(([prop, val]) => {
+        // JS свойство стиля camelCase, нужно преобразовать к CSS (kebab-case) или можно напрямую
+        target.style[prop] = val;
+      });
+    });
+  }
+
+  // Отрисовка таблицы редактора стилей
+  function buildStyleEditor() {
+    styleTableBody.innerHTML = '';
+    elementsData.forEach(el => {
+      editableCssProps.forEach(prop => {
+        // Некоторые свойства могут отсутствовать - добавим с пустым значением
+        if (!(prop in el.styles)) el.styles[prop] = '';
+        const tr = document.createElement('tr');
+        const tdName = document.createElement('td');
+        tdName.textContent = `${el.name} — ${camelToKebab(prop)}`;
+        // Проверяем конфликт
+        const conflictsFound = checkConflicts(el.styles);
+        if (conflictsFound.includes(prop)) {
+          tdName.classList.add('conflict');
+          tdName.title = 'Конфликтующее CSS-свойство';
+        }
+        const tdInput = document.createElement('td');
+
+        let inputEl;
+        // Цвета - color, backgroundColor, boxShadow (только часть)
+        if (prop.toLowerCase().includes('color') || prop === 'border' || prop === 'boxShadow') {
+          inputEl = document.createElement('input');
+          inputEl.type = 'text';
+          inputEl.value = el.styles[prop];
+          inputEl.placeholder = 'например: #fff или rgb(255,255,255)';
+        } else if (prop === 'opacity') {
+          inputEl = document.createElement('input');
+          inputEl.type = 'number';
+          inputEl.min = 0;
+          inputEl.max = 1;
+          inputEl.step = 0.05;
+          inputEl.value = el.styles[prop];
+        } else if (prop === 'fontWeight') {
+          inputEl = document.createElement('select');
+          ['','normal','bold','lighter','bolder','100','200','300','400','500','600','700','800','900'].forEach(opt=>{
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt || 'не задано';
+            if (opt === el.styles[prop]) option.selected = true;
+            inputEl.appendChild(option);
+          });
+        } else if (prop === 'animation') {
+          inputEl = document.createElement('input');
+          inputEl.type = 'text';
+          inputEl.placeholder = 'например: blinkAnim 1.2s infinite alternate';
+          inputEl.value = el.styles[prop];
+        } else {
+          inputEl = document.createElement('input');
+          inputEl.type = 'text';
+          inputEl.value = el.styles[prop];
+          inputEl.placeholder = 'например: 10px, 1rem, auto';
+        }
+        inputEl.setAttribute('aria-label', `Редактировать ${el.name} стиль ${camelToKebab(prop)}`);
+        inputEl.dataset.elId = el.id;
+        inputEl.dataset.prop = prop;
+
+        // Обработка изменения
+        inputEl.addEventListener('input', e => {
+          const { elId, prop } = e.target.dataset;
+          const val = e.target.value.trim();
+          const elem = elementsData.find(x => x.id === elId);
+          if (!elem) return;
+          elem.styles[prop] = val;
+          applyStylesToElement(elem);
+          // Перерисовываем таблицу, чтобы подсветить конфликты
+          buildStyleEditor();
+        });
+
+        tdInput.appendChild(inputEl);
+        tr.appendChild(tdName);
+        tr.appendChild(tdInput);
+        styleTableBody.appendChild(tr);
+      });
+    });
+  }
+
+  // Преобразует camelCase в kebab-case
+  function camelToKebab(str) {
+    return str.replace(/[A-Z]/g, m => '-' + m.toLowerCase());
+  }
+
+  // Переключатель сетки плиток (2,3,5 в ряд)
+  function setGrid(cols) {
+    demoGrid.classList.remove('grid-2','grid-3','grid-5');
+    demoGrid.classList.add(`grid-${cols}`);
+    Object.entries(gridButtons).forEach(([num, btn])=>{
+      btn.classList.toggle('active', +num === cols);
+      btn.setAttribute('aria-pressed', (+num === cols).toString());
+    });
+  }
+
+  // Управление открытием/закрытием редактора
+  function togglePanel(panel, open) {
+    if (open) {
+      panel.classList.add('open');
+      panel.setAttribute('aria-hidden', 'false');
+      panel.focus();
+    } else {
+      panel.classList.remove('open');
+      panel.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  // Экспорт стилей в JSON
+  function exportStyles() {
+    const json = JSON.stringify(elementsData, null, 2);
+    const blob = new Blob([json], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'styles.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // Импорт стилей из JSON
+  function importStyles(jsonData) {
+    try {
+      const data = JSON.parse(jsonData);
+      if (!Array.isArray(data)) throw new Error('Неверный формат JSON');
+      data.forEach(newEl => {
+        const el = elementsData.find(e => e.id === newEl.id);
+        if (el) {
+          el.styles = {...el.styles, ...newEl.styles};
+          applyStylesToElement(el);
+        }
+      });
+      buildStyleEditor();
+    } catch(e) {
+      alert('Ошибка при импорте JSON: ' + e.message);
+    }
+  }
+
+  // Обработка файла для импорта
+  importFileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => importStyles(reader.result);
+    reader.readAsText(file);
+    importFileInput.value = '';
+  });
+
+  // === Инициализация ===
+  buildDemoGrid();
+  buildStyleEditor();
+  setGrid(3);
+
+  // События кнопок переключения сетки
+  gridButtons[2].addEventListener('click', () => setGrid(2));
+  gridButtons[3].addEventListener('click', () => setGrid(3));
+  gridButtons[5].addEventListener('click', () => setGrid(5));
+
+  // Открытие/закрытие редактора стилей
+  btnOpenEditor.addEventListener('click', () => {
+    const opened = styleEditor.classList.contains('open');
+    togglePanel(styleEditor, !opened);
+    btnOpenEditor.setAttribute('aria-expanded', (!opened).toString());
+  });
+  btnCloseEditor.addEventListener('click', () => {
+    togglePanel(styleEditor, false);
+    btnOpenEditor.setAttribute('aria-expanded', 'false');
+  });
+
+  // Открытие/закрытие библиотеки стилей
+  btnOpenGuide.addEventListener('click', () => {
+    const opened = styleGuide.classList.contains('open');
+    togglePanel(styleGuide, !opened);
+    btnOpenGuide.setAttribute('aria-expanded', (!opened).toString());
+  });
+  btnCloseGuide.addEventListener('click', () => {
+    togglePanel(styleGuide, false);
+    btnOpenGuide.setAttribute('aria-expanded', 'false');
+  });
+
+  // Экспорт/Импорт JSON
+  exportBtn.addEventListener('click', exportStyles);
+  importBtn.addEventListener('click', () => importFileInput.click());
+
+  // === Анимация мигающей лампы (для примера) ===
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = `
+    @keyframes blinkAnim {
+      0% { opacity: 1; box-shadow: 0 0 12px limegreen; }
+      50% { opacity: 0.3; box-shadow: none; }
+      100% { opacity: 1; box-shadow: 0 0 12px limegreen; }
+    }
+  `;
+  document.head.appendChild(styleSheet);
+
+  // Обработка мобильной клавиатуры (для удобства)
+  // При появлении клавиатуры фокус смещаем scroll demoPanel
+  function adjustForKeyboard() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  }
+  window.addEventListener('resize', adjustForKeyboard);
+  adjustForKeyboard();
+
+  // Улучшаем доступность клавиатурой
+  // Закрытие панелей по Esc
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (styleEditor.classList.contains('open')) {
+        togglePanel(styleEditor, false);
+        btnOpenEditor.setAttribute('aria-expanded', 'false');
+        btnOpenEditor.focus();
+      }
+      if (styleGuide.classList.contains('open')) {
+        togglePanel(styleGuide, false);
+        btnOpenGuide.setAttribute('aria-expanded', 'false');
+        btnOpenGuide.focus();
+      }
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
