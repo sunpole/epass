@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Генератор паролей — одностраничный</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --accent:#06b6d4; --muted:#94a3b8; --text:#e6eef6;
+    font-family: Inter, Roboto, Arial, sans-serif;
+  }
+  body{margin:0; min-height:100vh; background:linear-gradient(180deg,#071025 0%, #081428 100%); color:var(--text); display:flex; align-items:center; justify-content:center; padding:24px;}
+  .wrap{width:100%; max-width:880px; background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border-radius:12px; padding:20px; box-shadow:0 8px 30px rgba(2,6,23,0.7); border:1px solid rgba(255,255,255,0.03);}
+  h1{margin:0 0 12px;font-size:20px;}
+  .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
+  .col{display:flex; flex-direction:column; gap:8px; flex:1 1 200px;}
+  label{font-size:13px; color:var(--muted);}
+  input[type="number"], input[type="text"], select, textarea{background:var(--card); border:1px solid rgba(255,255,255,0.03); color:var(--text); padding:8px 10px; border-radius:8px; outline:none; font-size:14px;}
+  .presets, .difficulties{display:flex; gap:8px; flex-wrap:wrap;}
+  button{background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--text); padding:8px 12px; border-radius:8px; cursor:pointer; font-size:14px;}
+  button.primary{background:linear-gradient(90deg,var(--accent), #0ea5a5); color:#022; border:0;}
+  .output{display:flex; gap:8px; align-items:center;}
+  .password-field{flex:1; padding:10px 12px; border-radius:10px; background:#081425; border:1px solid rgba(255,255,255,0.03); font-family:monospace; font-size:15px; color:var(--text); overflow:auto;}
+  .sm{font-size:12px; color:var(--muted);}
+  .hint{margin-top:8px; font-size:12px; color:var(--muted);}
+  .controls{display:flex; gap:8px; flex-wrap:wrap;}
+  .foot{margin-top:14px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+  .error{color:#ffb4b4;}
+  textarea{min-height:84px; resize:vertical;}
+  .chip{padding:6px 10px; border-radius:999px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); font-size:13px;}
+  @media (max-width:560px){ .row{flex-direction:column;} .col{width:100%} }
+</style>
+</head>
+<body>
+<div class="wrap" role="main" aria-labelledby="title">
+  <h1 id="title">Генератор паролей (один файл, готов для GitHub Pages)</h1>
+
+  <div class="row" style="margin-bottom:10px;">
+    <div class="col" style="flex: 1 1 320px;">
+      <label>Пресеты длины</label>
+      <div class="presets">
+        <button type="button" data-len="4" class="preset">4 символа</button>
+        <button type="button" data-len="8" class="preset">8 символов</button>
+        <button type="button" data-len="12" class="preset">12 символов</button>
+      </div>
+    </div>
+
+    <div class="col" style="flex: 1 1 220px;">
+      <label>Сложность</label>
+      <div class="difficulties">
+        <button type="button" data-diff="easy" class="diff chip">Лёгкий</button>
+        <button type="button" data-diff="medium" class="diff chip">Сложный</button>
+        <button type="button" data-diff="hard" class="diff chip">Очень сложный</button>
+      </div>
+    </div>
+
+    <div class="col" style="flex: 0 1 160px;">
+      <label>Длина (обязательно)</label>
+      <input id="length" type="number" min="1" value="12" />
+      <div class="sm">Укажите число символов (обязательно для кастома и пресетов).</div>
+    </div>
+  </div>
+
+  <div style="margin-top:8px;">
+    <label>Маска (необязательно). Символы: A,B,C,D,E,F,G. Пример: "C C D E F" или просто "CCDEFG"</label>
+    <input id="mask" type="text" placeholder="Введите маску из символов A..G или оставьте пустой" />
+    <div class="hint">
+      Значения маски:
+      <span class="chip">A: англ. <i>малые</i> буквы</span>
+      <span class="chip">B: англ. <i>ЗАГЛ.</i> буквы</span>
+      <span class="chip">C: мал+ЗАГЛ буквы</span>
+      <span class="chip">D: цифры</span>
+      <span class="chip">E: спец. символы</span>
+      <span class="chip">F: последовательность типов <b>мал, БОЛ, цифра, спец</b> (повтор)</span>
+      <span class="chip">G: любой из всех доступных</span>
+    </div>
+  </div>
+
+  <hr style="margin:14px 0; border:0; height:1px; background:rgba(255,255,255,0.03);" />
+
+  <div class="row" style="align-items:center;">
+    <div style="flex:1;">
+      <label>Сгенерированный пароль</label>
+      <div class="output" style="margin-top:6px;">
+        <div id="pwd" class="password-field" contenteditable="false" aria-live="polite" aria-atomic="true"></div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button id="gen" class="primary">Сгенерировать</button>
+          <button id="copy">Скопировать</button>
+        </div>
+      </div>
+      <div id="msg" class="sm" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="sm">Повторное нажатие "Сгенерировать" выдаёт новый пароль по текущим настройкам.</div>
+    <div style="display:flex; gap:8px;">
+      <button id="showMaskLegend">Показать образцы</button>
+      <button id="reset">Сбросить настройки</button>
+    </div>
+  </div>
+
+  <div id="examples" style="margin-top:12px; display:none;">
+    <label>Примеры паролей по текущей маске/настройкам</label>
+    <textarea id="sampleList" readonly></textarea>
+  </div>
+</div>
+
+<script>
+/*
+  Универсальный генератор паролей в одном файле.
+  Соответствует требованиям:
+   - пресеты длины 4,8,12
+   - переключатель сложности: easy, medium, hard
+   - обязательное поле длины
+   - маска A..G с поведением F (повторяющийся цикл типов)
+   - кнопка "Сгенерировать" (нажатие генерирует новый пароль)
+   - кнопка "Скопировать" — использует Clipboard API (работает на ПК и моб)
+*/
+
+(function(){
+  // Символьные наборы
+  const lower = "abcdefghijklmnopqrstuvwxyz";
+  const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const digits = "0123456789";
+  // набор специальных символов согласно ТЗ
+  const specials = `+×÷=%_€£¥₽!@#$/^&*()-'":;,?\\\`~|<>{}[]`;
+  // combine all
+  const ALL = lower + upper + digits + specials;
+
+  // DOM
+  const elLen = document.getElementById('length');
+  const elMask = document.getElementById('mask');
+  const btnGen = document.getElementById('gen');
+  const elPwd = document.getElementById('pwd');
+  const btnCopy = document.getElementById('copy');
+  const msg = document.getElementById('msg');
+  const presets = document.querySelectorAll('.preset');
+  const diffs = document.querySelectorAll('.diff');
+  const examples = document.getElementById('examples');
+  const sampleList = document.getElementById('sampleList');
+  const btnShow = document.getElementById('showMaskLegend');
+  const btnReset = document.getElementById('reset');
+
+  // state
+  let difficulty = 'medium'; // default
+
+  // Helpers
+  function randInt(max){ return Math.floor(Math.random()*max); }
+  function pick(str){ return str.charAt(randInt(str.length)); }
+  function shuffleArray(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]]=[arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  // Validate & parse mask: remove spaces, uppercase chars
+  function parseMask(raw){
+    if(!raw) return null;
+    const cleaned = raw.replace(/\s+/g,'').toUpperCase();
+    if(!/^[A-G]+$/.test(cleaned)) return { error: 'Маска должна содержать только буквы A..G (без пробелов или с ними).' };
+    return { mask: cleaned };
+  }
+
+  // Generate one character by mask symbol
+  function genBySymbol(sym, fCycleState){
+    switch(sym){
+      case 'A': return pick(lower);
+      case 'B': return pick(upper);
+      case 'C': // any letter (lower or upper)
+        return (Math.random()<0.5)? pick(lower): pick(upper);
+      case 'D': return pick(digits);
+      case 'E': return pick(specials);
+      case 'F': // cycle: lower, upper, digit, special (repeat)
+        // fCycleState is index 0..3: 0->lower,1->upper,2->digit,3->special
+        if(fCycleState === undefined) fCycleState = 0;
+        const map = [() => pick(lower), () => pick(upper), () => pick(digits), () => pick(specials)];
+        const ch = map[fCycleState % 4]();
+        return { ch, next: (fCycleState+1)%4 };
+      case 'G': // any from all sets
+        return pick(ALL);
+      default:
+        return '';
+    }
+  }
+
+  // Generate password when mask provided
+  function generateByMask(mask, length){
+    // If mask shorter than length -> repeat mask; if longer -> cut to length
+    let result = [];
+    let fState = 0;
+    for(let i=0;i<length;i++){
+      const sym = mask[i % mask.length];
+      const res = genBySymbol(sym, fState);
+      if(typeof res === 'object'){ result.push(res.ch); fState = res.next; }
+      else {
+        // For symbols other than F, fState unchanged
+        result.push(res);
+      }
+    }
+    // optionally shuffle? Mask implies order, so do not shuffle.
+    return result.join('');
+  }
+
+  // Default generation without mask: use difficulty
+  function generateByDifficulty(length, difficulty){
+    let pool = "";
+    if(difficulty === 'easy'){ pool = lower; }
+    else if(difficulty === 'medium'){ pool = lower + upper + digits; }
+    else if(difficulty === 'hard'){ pool = lower + upper + digits + specials; }
+    // Guarantee at least one char of each major type on higher difficulties?
+    // For 'medium' and 'hard' it's better to ensure password contains different types.
+    const out = [];
+    if(difficulty === 'medium'){
+      // ensure at least one lower, one upper, one digit when length>=3
+      if(length >= 3){
+        out.push(pick(lower), pick(upper), pick(digits));
+      }
+    } else if(difficulty === 'hard'){
+      // ensure at least one lower, one upper, one digit, one special when length>=4
+      if(length >= 4){
+        out.push(pick(lower), pick(upper), pick(digits), pick(specials));
+      }
+    }
+    while(out.length < length){
+      out.push(pick(pool));
+    }
+    // shuffle to avoid predictable placement
+    return shuffleArray(out).slice(0, length).join('');
+  }
+
+  function setMsg(text, isError){
+    msg.textContent = text || '';
+    msg.className = isError ? 'sm error' : 'sm';
+  }
+
+  function generatePassword(){
+    setMsg('');
+    const lenVal = parseInt(elLen.value, 10);
+    if(!lenVal || lenVal <= 0 || !Number.isFinite(lenVal)){
+      setMsg('Ошибка: укажите корректное положительное число в поле длины.', true);
+      return;
+    }
+    const rawMask = elMask.value.trim();
+    if(rawMask){
+      const parsed = parseMask(rawMask);
+      if(parsed.error){ setMsg(parsed.error, true); return; }
+      const mask = parsed.mask;
+      // If mask length doesn't divide or equals length — it's ok: mask repeats or truncates.
+      const res = generateByMask(mask, lenVal);
+      elPwd.textContent = res;
+      return;
+    } else {
+      const res = generateByDifficulty(lenVal, difficulty);
+      elPwd.textContent = res;
+      return;
+    }
+  }
+
+  // Copy to clipboard with fallback
+  async function copyToClipboard(){
+    const text = elPwd.textContent || '';
+    if(!text){
+      setMsg('Сначала сгенерируйте пароль.', true);
+      return;
+    }
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+      } else {
+        // fallback: create textarea
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, 999999);
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setMsg('Пароль скопирован в буфер обмена.');
+    } catch(e){
+      setMsg('Ошибка копирования: ' + (e && e.message ? e.message : e), true);
+    }
+  }
+
+  // Event listeners
+  btnGen.addEventListener('click', generatePassword);
+  btnCopy.addEventListener('click', copyToClipboard);
+
+  presets.forEach(p => {
+    p.addEventListener('click', () => {
+      const len = parseInt(p.dataset.len,10) || 8;
+      elLen.value = len;
+      // optionally generate immediately
+      generatePassword();
+    });
+  });
+
+  diffs.forEach(d => {
+    d.addEventListener('click', () => {
+      difficulty = d.dataset.diff;
+      // Visual toggle
+      diffs.forEach(x => x.classList.remove('primary'));
+      d.classList.add('primary');
+    });
+    // set initial visual
+    if(d.dataset.diff === difficulty) d.classList.add('primary');
+  });
+
+  btnShow.addEventListener('click', () => {
+    // Show example passwords according to current settings
+    const lenVal = parseInt(elLen.value, 10);
+    if(!lenVal || lenVal <= 0) { setMsg('Укажите корректную длину перед просмотром примеров.', true); return; }
+    const rawMask = elMask.value.trim();
+    let samples = [];
+    for(let i=0;i<8;i++){
+      if(rawMask){
+        const parsed = parseMask(rawMask);
+        if(parsed.error){ setMsg(parsed.error, true); return; }
+        samples.push(generateByMask(parsed.mask, lenVal));
+      } else {
+        samples.push(generateByDifficulty(lenVal, difficulty));
+      }
+    }
+    sampleList.value = samples.join("\n");
+    examples.style.display = 'block';
+  });
+
+  btnReset.addEventListener('click', () => {
+    elLen.value = 12;
+    elMask.value = '';
+    difficulty = 'medium';
+    diffs.forEach(x => x.classList.remove('primary'));
+    document.querySelector('[data-diff="medium"]').classList.add('primary');
+    elPwd.textContent = '';
+    sampleList.value = '';
+    examples.style.display = 'none';
+    setMsg('Сброшено к значениям по умолчанию.');
+  });
+
+  // Keyboard: Enter on length or mask generates
+  [elLen, elMask].forEach(el => {
+    el.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ generatePassword(); e.preventDefault(); }
+    });
+  });
+
+  // Initialize with one sample password
+  generatePassword();
+
+  // Make password text selectable for manual copy: clicking selects it
+  elPwd.addEventListener('click', () => {
+    // Select text inside the div: use Range/Selection
+    const range = document.createRange();
+    range.selectNodeContents(elPwd);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+
+  // Accessibility: long-press on copy for mobile also works via click event.
+
+})();
+</script>
+</body>
+</html>
