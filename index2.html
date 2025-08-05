@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Генератор паролей — мобильный интерфейс (один файл)</title>
+<style>
+  /* Общая тема — "мобильное приложение" */
+  :root{
+    --bg:#061021;
+    --surface:#07172a;
+    --card:#082033;
+    --accent:#10b981;
+    --accent-2:#06b6d4;
+    --muted:#9fb1c6;
+    --text:#e6f3fb;
+    --danger:#ff6b6b;
+    --radius:18px;
+    font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+
+  html,body{height:100%; margin:0; background:linear-gradient(180deg,#021022 0%, #072033 100%); color:var(--text); -webkit-tap-highlight-color:transparent;}
+  .app{
+    max-width:480px; margin:18px auto; padding:18px; box-sizing:border-box;
+    border-radius:20px; background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+    box-shadow: 0 10px 30px rgba(2,6,23,0.7); border:1px solid rgba(255,255,255,0.03);
+  }
+
+  header{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+  .logo{
+    width:56px; height:56px; border-radius:12px; background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; color:#042022;
+    box-shadow:0 6px 18px rgba(6,180,165,0.14);
+  }
+  h1{font-size:18px; margin:0;}
+  p.lead{margin:0; color:var(--muted); font-size:13px;}
+
+  /* Вкладки */
+  .tabs{display:flex; gap:8px; margin:12px 0;}
+  .tab{
+    flex:1; text-align:center; padding:10px 8px; border-radius:12px; background:transparent; color:var(--muted);
+    border:1px solid rgba(255,255,255,0.03); font-weight:600; font-size:15px; cursor:pointer;
+  }
+  .tab.active{background:linear-gradient(90deg,var(--accent-2),var(--accent)); color:#021; box-shadow:0 6px 18px rgba(6,180,165,0.08); border:0;}
+
+  .panel{padding:12px 2px 0 2px;}
+
+  .group{margin-bottom:12px;}
+  .label{font-size:13px; color:var(--muted); margin-bottom:8px; display:block;}
+
+  /* Кнопки и элементы управления — крупные для касания */
+  .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .preset-list, .difficulty-list{display:flex; gap:10px; flex:1; flex-wrap:wrap;}
+  .preset-btn, .diff-btn{
+    flex:1; min-width:84px; padding:12px 10px; border-radius:12px; background:transparent; color:var(--text); border:1px solid rgba(255,255,255,0.03);
+    font-size:16px; text-align:center; cursor:pointer; user-select:none;
+  }
+  .preset-btn.active, .diff-btn.active{background:linear-gradient(90deg,var(--accent-2),var(--accent)); color:#032; border:0; box-shadow:0 8px 20px rgba(6,180,165,0.08);}
+
+  input[type="number"], input[type="text"], textarea{
+    width:100%; padding:12px 14px; border-radius:12px; background:var(--card); border:1px solid rgba(255,255,255,0.03);
+    color:var(--text); font-size:16px; outline:none; box-sizing:border-box;
+  }
+  .small{font-size:13px; color:var(--muted); margin-top:6px;}
+
+  /* Вывод пароля */
+  .output{
+    display:flex; gap:10px; align-items:center; margin-top:6px;
+  }
+  .pwd{
+    flex:1; padding:14px; border-radius:14px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.006));
+    border:1px solid rgba(255,255,255,0.03); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; font-size:16px; word-break:break-all;
+    min-height:56px; display:flex; align-items:center;
+  }
+  .btns{display:flex; gap:10px; flex-direction:column;}
+  .btn{
+    padding:10px 14px; border-radius:12px; font-size:15px; cursor:pointer; border:1px solid rgba(255,255,255,0.03);
+    background:transparent; color:var(--text);
+  }
+  .btn.primary{background:linear-gradient(90deg,var(--accent-2),var(--accent)); color:#032; border:0; box-shadow:0 8px 20px rgba(6,180,165,0.08);}
+  .row-inline{display:flex; gap:8px; align-items:center;}
+
+  /* Переключатель режима использования маски (show/hint) */
+  .hint-chips{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  .chip{padding:6px 10px; border-radius:999px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); font-size:13px; color:var(--muted);}
+
+  .footer{margin-top:14px; display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;}
+  .muted{color:var(--muted); font-size:13px;}
+
+  textarea#sampleList{width:100%; padding:12px; border-radius:12px; background:var(--card); color:var(--text); border:1px solid rgba(255,255,255,0.03); min-height:120px; font-size:14px; resize:vertical;}
+
+  /* Адаптивность */
+  @media (max-width:420px){
+    .logo{width:48px;height:48px;font-size:18px;}
+    .preset-btn, .diff-btn{font-size:15px; padding:10px;}
+    .pwd{font-size:15px; min-height:64px;}
+  }
+
+  /* Акцент на доступность при фокусе */
+  .preset-btn:focus, .diff-btn:focus, .tab:focus, .btn:focus, input:focus, textarea:focus{outline:2px solid rgba(255,255,255,0.04); outline-offset:2px;}
+</style>
+</head>
+<body>
+  <main class="app" role="main" aria-labelledby="app-title">
+    <header>
+      <div class="logo" aria-hidden="true">PW</div>
+      <div>
+        <h1 id="app-title">Генератор паролей</h1>
+        <p class="lead">Мобильный интерфейс — быстрые пресеты и настраиваемая маска</p>
+      </div>
+    </header>
+
+    <!-- Вкладки: Пресеты / Кастом -->
+    <nav class="tabs" role="tablist" aria-label="Режимы генерации">
+      <button class="tab active" role="tab" aria-selected="true" id="tab-presets" data-tab="presets">По пресетам</button>
+      <button class="tab" role="tab" aria-selected="false" id="tab-custom" data-tab="custom">Кастомный</button>
+    </nav>
+
+    <!-- Контент -->
+    <section class="panel" id="panel-presets" role="tabpanel" aria-labelledby="tab-presets">
+      <!-- Пресеты длины -->
+      <div class="group">
+        <label class="label">Длина — выберите пресет</label>
+        <div class="preset-list" role="radiogroup" aria-label="Пресеты длины">
+          <button class="preset-btn" data-len="4" aria-checked="false" role="radio">4</button>
+          <button class="preset-btn active" data-len="8" aria-checked="true" role="radio">8</button>
+          <button class="preset-btn" data-len="12" aria-checked="false" role="radio">12</button>
+        </div>
+        <div class="small muted">Пресет также задаёт длину выдаваемого пароля.</div>
+      </div>
+
+      <!-- Сложность -->
+      <div class="group">
+        <label class="label">Сложность</label>
+        <div class="difficulty-list" role="radiogroup" aria-label="Сложность пароля">
+          <button class="diff-btn" data-diff="easy" role="radio" aria-checked="false">Лёгкий</button>
+          <button class="diff-btn active" data-diff="medium" role="radio" aria-checked="true">Сложный</button>
+          <button class="diff-btn" data-diff="hard" role="radio" aria-checked="false">Очень сложный</button>
+        </div>
+        <div class="small muted">Лёгкий — только строчные; Сложный — буквы+цифры; Очень сложный — включая спецсимволы.</div>
+      </div>
+
+      <div class="group">
+        <label class="label">Маска (опционально)</label>
+        <input id="mask-presets" type="text" placeholder="Маска A..G (напр. CDFG) — при заполнении используется маска" />
+        <div class="hint-chips">
+          <span class="chip">A: a-z</span>
+          <span class="chip">B: A-Z</span>
+          <span class="chip">C: a-z + A-Z</span>
+          <span class="chip">D: 0-9</span>
+          <span class="chip">E: спецсимволы</span>
+          <span class="chip">F: цикл lower→UPPER→digit→special</span>
+          <span class="chip">G: любой</span>
+        </div>
+      </div>
+
+      <!-- Генерация и вывод -->
+      <div class="group">
+        <label class="label">Сгенерированный пароль</label>
+        <div class="output" aria-live="polite">
+          <div id="pwd-presets" class="pwd" tabindex="0" aria-atomic="true" aria-relevant="text"></div>
+          <div class="btns">
+            <button id="gen-presets" class="btn primary" aria-label="Сгенерировать пароль">Сгенерировать</button>
+            <button id="copy-presets" class="btn" aria-label="Скопировать пароль">Скопировать</button>
+          </div>
+        </div>
+        <div id="msg-presets" class="small muted" role="status"></div>
+      </div>
+
+      <div class="group">
+        <button id="examples-presets" class="btn">Показать примеры</button>
+        <div id="samples-presets" style="display:none; margin-top:10px;">
+          <textarea id="sampleList-presets" readonly></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-custom" role="tabpanel" aria-labelledby="tab-custom" style="display:none;">
+      <div class="group">
+        <label class="label">Длина (обязательно)</label>
+        <input id="length-custom" type="number" min="1" value="12" />
+        <div class="small muted">Укажите количество символов — обязательно для кастомного режима.</div>
+      </div>
+
+      <div class="group">
+        <label class="label">Маска (обязательно или оставьте пустой для авто)</label>
+        <input id="mask-custom" type="text" placeholder="Маска из A..G. Пример: CCFDF" />
+        <div class="hint-chips" style="margin-top:8px;">
+          <span class="chip">A: a-z</span>
+          <span class="chip">B: A-Z</span>
+          <span class="chip">C: a-z + A-Z</span>
+          <span class="chip">D: 0-9</span>
+          <span class="chip">E: спец</span>
+          <span class="chip">F: цикл lower→UPPER→digit→special</span>
+          <span class="chip">G: любой</span>
+        </div>
+      </div>
+
+      <div class="group">
+        <label class="label">Если маска пуста — выберите сложность</label>
+        <div class="difficulty-list" role="radiogroup">
+          <button class="diff-btn custom-diff" data-diff="easy" role="radio">Лёгкий</button>
+          <button class="diff-btn custom-diff active" data-diff="medium" role="radio">Сложный</button>
+          <button class="diff-btn custom-diff" data-diff="hard" role="radio">Очень сложный</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <label class="label">Сгенерированный пароль</label>
+        <div class="output" aria-live="polite">
+          <div id="pwd-custom" class="pwd" tabindex="0"></div>
+          <div class="btns">
+            <button id="gen-custom" class="btn primary">Сгенерировать</button>
+            <button id="copy-custom" class="btn">Скопировать</button>
+          </div>
+        </div>
+        <div id="msg-custom" class="small muted"></div>
+      </div>
+
+      <div class="group">
+        <button id="examples-custom" class="btn">Показать примеры</button>
+        <div id="samples-custom" style="display:none; margin-top:10px;">
+          <textarea id="sampleList-custom" readonly></textarea>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">
+      <div class="muted">Однофайловая реализация — готово для GitHub Pages</div>
+      <div class="muted">Доступно офлайн</div>
+    </div>
+  </main>
+
+<script>
+/*
+  Улучшенный одностраничный генератор паролей.
+  Основные изменения:
+   - две вкладки: "По пресетам" / "Кастомный"
+   - пресеты 4/8/12 как переключатели (radio-like)
+   - крупный мобильный интерфейс и оптимизация для сенсорных экранов
+   - маска A..G, поведение F (цикл lower->UPPER->digit->special)
+   - копирование в буфер обмена
+   - показ примеров
+*/
+
+/* --- Символьные наборы --- */
+const lower = "abcdefghijklmnopqrstuvwxyz";
+const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const digits = "0123456789";
+/* Спец. символы — использованы символы из задания (экранированы где необходимо) */
+const specials = `+×÷=%_€£¥₽!@#$/^&*()-'":;,?\\\`~|<>{}[]`;
+const ALL = lower + upper + digits + specials;
+
+/* --- Общие утилиты --- */
+const randInt = (max) => Math.floor(Math.random()*max);
+const pick = (s) => s.charAt(randInt(s.length));
+const shuffleArray = (arr) => {
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+};
+
+/* --- Генерация по символу маски --- */
+function genBySymbol(sym, fCycleState){
+  switch(sym){
+    case 'A': return { ch: pick(lower), next: fCycleState };
+    case 'B': return { ch: pick(upper), next: fCycleState };
+    case 'C': return { ch: (Math.random()<0.5? pick(lower): pick(upper)), next: fCycleState };
+    case 'D': return { ch: pick(digits), next: fCycleState };
+    case 'E': return { ch: pick(specials), next: fCycleState };
+    case 'F': {
+      const idx = fCycleState || 0;
+      const map = [() => pick(lower), () => pick(upper), () => pick(digits), () => pick(specials)];
+      const ch = map[idx % 4]();
+      return { ch, next: (idx + 1) % 4 };
+    }
+    case 'G': return { ch: pick(ALL), next: fCycleState };
+    default: return { ch: '', next: fCycleState };
+  }
+}
+
+/* --- Парсинг маски --- */
+function parseMask(raw){
+  if(!raw) return null;
+  const cleaned = raw.replace(/\s+/g, '').toUpperCase();
+  if(!/^[A-G]+$/.test(cleaned)) return { error: 'Маска должна содержать только буквы A..G.' };
+  return { mask: cleaned };
+}
+
+/* --- Генерация по маске --- */
+function generateByMask(mask, length){
+  const out = [];
+  let fState = 0;
+  for(let i=0;i<length;i++){
+    const sym = mask[i % mask.length];
+    const res = genBySymbol(sym, fState);
+    out.push(res.ch);
+    fState = res.next;
+  }
+  return out.join('');
+}
+
+/* --- Генерация по сложности --- */
+function generateByDifficulty(length, difficulty){
+  let pool = "";
+  if(difficulty === 'easy') pool = lower;
+  else if(difficulty === 'medium') pool = lower + upper + digits;
+  else pool = lower + upper + digits + specials;
+
+  const out = [];
+  // гарантия наличия типов для medium/hard
+  if(difficulty === 'medium' && length >= 3){
+    out.push(pick(lower), pick(upper), pick(digits));
+  } else if(difficulty === 'hard' && length >= 4){
+    out.push(pick(lower), pick(upper), pick(digits), pick(specials));
+  }
+  while(out.length < length){
+    out.push(pick(pool));
+  }
+  return shuffleArray(out).slice(0, length).join('');
+}
+
+/* --- DOM элементы: пресеты --- */
+const presetButtons = Array.from(document.querySelectorAll('.preset-btn'));
+const diffButtonsPresets = Array.from(document.querySelectorAll('.diff-btn'));
+const maskPresetsInput = document.getElementById('mask-presets');
+const pwdPresets = document.getElementById('pwd-presets');
+const genPresetsBtn = document.getElementById('gen-presets');
+const copyPresetsBtn = document.getElementById('copy-presets');
+const msgPresets = document.getElementById('msg-presets');
+const examplesPresetsBtn = document.getElementById('examples-presets');
+const samplesPresets = document.getElementById('samples-presets');
+const sampleListPresets = document.getElementById('sampleList-presets');
+
+/* --- DOM элементы: кастом --- */
+const lengthCustomInput = document.getElementById('length-custom');
+const maskCustomInput = document.getElementById('mask-custom');
+const diffButtonsCustom = Array.from(document.querySelectorAll('.custom-diff'));
+const pwdCustom = document.getElementById('pwd-custom');
+const genCustomBtn = document.getElementById('gen-custom');
+const copyCustomBtn = document.getElementById('copy-custom');
+const msgCustom = document.getElementById('msg-custom');
+const examplesCustomBtn = document.getElementById('examples-custom');
+const samplesCustom = document.getElementById('samples-custom');
+const sampleListCustom = document.getElementById('sampleList-custom');
+
+/* --- Вкладки --- */
+const tabs = Array.from(document.querySelectorAll('.tab'));
+const panelPresets = document.getElementById('panel-presets');
+const panelCustom = document.getElementById('panel-custom');
+
+/* --- State --- */
+let currentPresetLen = 8;
+let currentPresetDiff = 'medium';
+let currentCustomDiff = 'medium';
+
+/* --- Инициализация визуальных радиокнопок --- */
+function activatePresetButton(btn){
+  presetButtons.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-checked','false'); });
+  btn.classList.add('active'); btn.setAttribute('aria-checked','true');
+  currentPresetLen = parseInt(btn.dataset.len, 10) || 8;
+}
+presetButtons.forEach(btn => {
+  if(parseInt(btn.dataset.len,10) === currentPresetLen) btn.classList.add('active'), btn.setAttribute('aria-checked','true');
+  btn.addEventListener('click', () => {
+    activatePresetButton(btn);
+  });
+});
+
+function activateDiffPresets(btn){
+  diffButtonsPresets.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-checked','false'); });
+  btn.classList.add('active'); btn.setAttribute('aria-checked','true');
+  currentPresetDiff = btn.dataset.diff;
+}
+diffButtonsPresets.forEach(btn => {
+  if(btn.dataset.diff === currentPresetDiff) btn.classList.add('active'), btn.setAttribute('aria-checked','true');
+  btn.addEventListener('click', () => activateDiffPresets(btn));
+});
+
+function activateDiffCustom(btn){
+  diffButtonsCustom.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-checked','false'); });
+  btn.classList.add('active'); btn.setAttribute('aria-checked','true');
+  currentCustomDiff = btn.dataset.diff;
+}
+diffButtonsCustom.forEach(btn => {
+  if(btn.dataset.diff === currentCustomDiff) btn.classList.add('active'), btn.setAttribute('aria-checked','true');
+  btn.addEventListener('click', () => activateDiffCustom(btn));
+});
+
+/* --- Вкладки переключение --- */
+tabs.forEach(t => {
+  t.addEventListener('click', () => {
+    tabs.forEach(x => { x.classList.remove('active'); x.setAttribute('aria-selected','false'); });
+    t.classList.add('active'); t.setAttribute('aria-selected','true');
+    // показываем панель
+    if(t.dataset.tab === 'presets'){ panelPresets.style.display = ''; panelCustom.style.display = 'none'; }
+    else { panelPresets.style.display = 'none'; panelCustom.style.display = ''; }
+  });
+});
+
+/* --- Основные функции генерации и взаимодействия --- */
+function setMsg(el, text, isError=false){
+  el.textContent = text || '';
+  el.style.color = isError ? getComputedStyle(document.documentElement).getPropertyValue('--danger') || '#ff6b6b' : '';
+}
+
+/* Пресеты */
+function generatePresets(){
+  setMsg(msgPresets, '');
+  const len = currentPresetLen;
+  const rawMask = maskPresetsInput.value.trim();
+  let pass = '';
+  if(rawMask){
+    const parsed = parseMask(rawMask);
+    if(parsed && parsed.error){ setMsg(msgPresets, parsed.error, true); return; }
+    pass = generateByMask(parsed.mask, len);
+  } else {
+    pass = generateByDifficulty(len, currentPresetDiff);
+  }
+  pwdPresets.textContent = pass;
+  setMsg(msgPresets, 'Готово. Нажмите "Скопировать", чтобы сохранить пароль.');
+}
+
+genPresetsBtn.addEventListener('click', generatePresets);
+
+copyPresetsBtn.addEventListener('click', async () => {
+  const text = pwdPresets.textContent || '';
+  if(!text){ setMsg(msgPresets, 'Сначала сгенерируйте пароль.', true); return; }
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, 999999);
+      document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    setMsg(msgPresets, 'Пароль скопирован в буфер обмена.');
+  } catch(e){
+    setMsg(msgPresets, 'Ошибка копирования.', true);
+  }
+});
+
+examplesPresetsBtn.addEventListener('click', () => {
+  const len = currentPresetLen;
+  const rawMask = maskPresetsInput.value.trim();
+  let samples = [];
+  if(rawMask){
+    const parsed = parseMask(rawMask);
+    if(parsed && parsed.error){ setMsg(msgPresets, parsed.error, true); return; }
+    for(let i=0;i<8;i++) samples.push(generateByMask(parsed.mask, len));
+  } else {
+    for(let i=0;i<8;i++) samples.push(generateByDifficulty(len, currentPresetDiff));
+  }
+  sampleListPresets.value = samples.join("\n");
+  samplesPresets.style.display = 'block';
+});
+
+/* Кастом */
+function generateCustom(){
+  setMsg(msgCustom, '');
+  const len = parseInt(lengthCustomInput.value, 10);
+  if(!len || len <= 0 || !Number.isFinite(len)){ setMsg(msgCustom, 'Укажите корректную длину (положительное число).', true); return; }
+  const rawMask = maskCustomInput.value.trim();
+  let pass = '';
+  if(rawMask){
+    const parsed = parseMask(rawMask);
+    if(parsed && parsed.error){ setMsg(msgCustom, parsed.error, true); return; }
+    pass = generateByMask(parsed.mask, len);
+  } else {
+    pass = generateByDifficulty(len, currentCustomDiff);
+  }
+  pwdCustom.textContent = pass;
+  setMsg(msgCustom, 'Готово.');
+}
+genCustomBtn.addEventListener('click', generateCustom);
+
+copyCustomBtn.addEventListener('click', async () => {
+  const text = pwdCustom.textContent || '';
+  if(!text){ setMsg(msgCustom, 'Сначала сгенерируйте пароль.', true); return; }
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, 999999);
+      document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    setMsg(msgCustom, 'Пароль скопирован в буфер обмена.');
+  } catch(e){
+    setMsg(msgCustom, 'Ошибка копирования.', true);
+  }
+});
+
+examplesCustomBtn.addEventListener('click', () => {
+  const len = parseInt(lengthCustomInput.value, 10);
+  if(!len || len <= 0 || !Number.isFinite(len)){ setMsg(msgCustom, 'Укажите корректную длину перед показом примеров.', true); return; }
+  const rawMask = maskCustomInput.value.trim();
+  let samples = [];
+  if(rawMask){
+    const parsed = parseMask(rawMask);
+    if(parsed && parsed.error){ setMsg(msgCustom, parsed.error, true); return; }
+    for(let i=0;i<8;i++) samples.push(generateByMask(parsed.mask, len));
+  } else {
+    for(let i=0;i<8;i++) samples.push(generateByDifficulty(len, currentCustomDiff));
+  }
+  sampleListCustom.value = samples.join("\n");
+  samplesCustom.style.display = 'block';
+});
+
+/* --- Поведение Enter для быстрого генерирования --- */
+[lengthCustomInput, maskCustomInput, maskPresetsInput].forEach(el => {
+  el.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ 
+      // если текущая панель видима — генерируем соответствующий пароль
+      if(panelPresets.style.display !== 'none') generatePresets();
+      else generateCustom();
+      e.preventDefault();
+    }
+  });
+});
+
+/* --- Инициалная генерация --- */
+generatePresets();
+
+/* --- Полезные: выбор текста по нажатию для удобства копирования --- */
+[pwdPresets, pwdCustom].forEach(el => {
+  el.addEventListener('click', () => {
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+});
+
+/* --- Функции экспорта (для возможного расширения) --- */
+/* Здесь оставлены точки расширения: можно добавить экспорт JSON, настройку набора спецсимволов и т.п. */
+
+</script>
+</body>
+</html>
